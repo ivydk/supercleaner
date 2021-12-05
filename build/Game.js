@@ -1,51 +1,48 @@
-import KeyListener from './KeyListener.js';
+import Egg from './Egg.js';
+import Garbage from './Garbage.js';
+import Player from './Player.js';
+import UserData from './UserData.js';
 export default class Game {
     canvas;
     ctx;
-    keyboard;
+    user;
     garbageItems;
+    eggs;
     player;
     countUntilNextItem;
+    gameLoop;
     constructor(canvas) {
+        this.user = new UserData();
         this.canvas = canvas;
         this.ctx = this.canvas.getContext('2d');
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
-        this.keyboard = new KeyListener();
         this.garbageItems = [];
+        this.eggs = [];
         for (let i = 0; i < Game.randomNumber(3, 10); i++) {
-            this.garbageItems.push({
-                img: Game.loadNewImage('./assets/img/icecream.png'),
-                xPos: Game.randomNumber(0, this.canvas.width - 32),
-                yPos: Game.randomNumber(0, this.canvas.height - 32),
-            });
+            this.garbageItems.push(new Garbage(this.canvas.width, this.canvas.height));
+            this.eggs.push(new Egg(this.canvas.width, this.canvas.height));
         }
-        this.player = {
-            img: Game.loadNewImage('./assets/img/character_robot_walk0.png'),
-            xPos: Game.randomNumber(0, this.canvas.width - 76),
-            xVel: 3,
-            yPos: Game.randomNumber(0, this.canvas.height - 92),
-            yVel: 3,
-        };
+        this.player = new Player(canvas.width, canvas.height);
         this.countUntilNextItem = 300;
         this.loop();
     }
     loop = () => {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.movePlayer();
+        this.player.move(this.canvas);
         this.draw();
-        if (this.keyboard.isKeyDown(KeyListener.KEY_SPACE)) {
+        if (this.player.isCleaning()) {
             this.cleanUpGarbage();
+            this.cleanUpEggs();
         }
-        this.writeTextToCanvas('Score: 0', 36, 120, 50);
+        this.writeTextToCanvas(`score: ${this.user.getScore()}`, 36, 120, 50);
         if (this.countUntilNextItem === 0) {
             const choice = Game.randomNumber(0, 10);
             if (choice < 5) {
-                this.garbageItems.push({
-                    img: Game.loadNewImage('./assets/img/icecream.png'),
-                    xPos: Game.randomNumber(0, this.canvas.width - 32),
-                    yPos: Game.randomNumber(0, this.canvas.height - 32),
-                });
+                this.garbageItems.push(new Garbage(this.canvas.width, this.canvas.height));
+            }
+            if (choice > 7) {
+                this.eggs.push(new Egg(this.canvas.width, this.canvas.height));
             }
             this.countUntilNextItem = Game.randomNumber(120, 240);
         }
@@ -54,34 +51,26 @@ export default class Game {
     };
     draw() {
         this.garbageItems.forEach((element) => {
-            this.ctx.drawImage(element.img, element.xPos, element.yPos);
+            element.draw(this.ctx);
         });
-        this.ctx.drawImage(this.player.img, this.player.xPos, this.player.yPos);
-    }
-    movePlayer() {
-        if (this.keyboard.isKeyDown(KeyListener.KEY_RIGHT)
-            && this.player.xPos + this.player.img.width < this.canvas.width) {
-            this.player.xPos += this.player.xVel;
-        }
-        if (this.keyboard.isKeyDown(KeyListener.KEY_LEFT)
-            && this.player.xPos > 0) {
-            this.player.xPos -= this.player.xVel;
-        }
-        if (this.keyboard.isKeyDown(KeyListener.KEY_UP)
-            && this.player.yPos > 0) {
-            this.player.yPos -= this.player.yVel;
-        }
-        if (this.keyboard.isKeyDown(KeyListener.KEY_DOWN)
-            && this.player.yPos + this.player.img.height < this.canvas.height) {
-            this.player.yPos += this.player.yVel;
-        }
+        this.eggs.forEach((element) => {
+            element.draw(this.ctx);
+        });
+        this.player.draw(this.ctx);
     }
     cleanUpGarbage() {
         this.garbageItems = this.garbageItems.filter((element) => {
-            if (this.player.xPos < element.xPos + element.img.width
-                && this.player.xPos + this.player.img.width > element.xPos
-                && this.player.yPos < element.yPos + element.img.height
-                && this.player.yPos + this.player.img.height > element.yPos) {
+            if (this.player.collidesWith(element)) {
+                this.user.addScore(1);
+                return false;
+            }
+            return true;
+        });
+    }
+    cleanUpEggs() {
+        this.eggs = this.eggs.filter((element) => {
+            if (this.player.collidesWith(element)) {
+                this.user.addScore(-3);
                 return false;
             }
             return true;

@@ -120,7 +120,7 @@ export default class KeyListener {
    * Constructs a new KeyListener.
    */
   constructor() {
-    // Register the arrow methods as listeners to keyevents
+    // Register the arrow methods as listeners to key`events
     // There is a third event ('keypress'), but we do not need to use it
     window.addEventListener('keydown', (ev: KeyboardEvent) => {
       this.keyCodeStates[ev.keyCode] = true;
